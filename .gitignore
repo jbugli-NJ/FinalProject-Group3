@@ -1,1 +1,4 @@
 /Code/zips
+/Code/src/bill_tagger.egg-info
+*.pyc
+/Code/unzipped

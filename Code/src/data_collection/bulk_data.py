@@ -1,12 +1,19 @@
-﻿# %% Imports
+﻿"""
+Executes initial collection steps for bill data.
+"""
+
+# %% Imports
 
 import asyncio
 
 import aiohttp
 
+import random
+
 import os
 
-import random
+import zipfile
+
 
 # %% Specify static inputs to use for URL construction
 
@@ -31,7 +38,7 @@ async def construct_urls(
     """
     Cycle through available bill types and congresses to construct links for use.
 
-    :param aiohttp.ClientSession session: An aiohttp client session to use for downloads.
+    :param aiohttp.ClientSession session: An aiohttp client session.
 
     :param list[int] congresses: The list of available congressional sessions to use.
 
@@ -69,7 +76,8 @@ async def construct_urls(
     invalid_urls = [u for u, v in validation_results if v != 200]
 
     if len(invalid_urls) > 0:
-        print(f"Invalid URLs (119th Congress Session 2 expected):\n{'\n'.join(invalid_urls)}\n\n")
+        print('Invalid URLs (119th Congress Session 2 expected):')
+        print('\n'.join(invalid_urls) + '\n\n')
 
     return valid_urls
 
@@ -86,11 +94,11 @@ async def download_bulk_data_file(
     Downloads bulk data from a given URL as a .zip file.
     Implements retry logic depending on the error tyle.
    
-    :param aiohttp.ClientSession: An aiohttp client session to use for downloads.
+    :param aiohttp.ClientSession: An aiohttp client session.
 
     :param str url: A valid .zip download link.
 
-    :param str save_path: The full path to use for saving the zipped contents, including the '.zip' extension.
+    :param str save_path: The full path to use for saving the zipped contents.
 
     :return: The path to the saved file, or None upon failure.
     """
@@ -145,7 +153,7 @@ async def download_bulk_data_file(
 
 # %% Define bulk data download function
 
-async def download_all_data(
+async def download_all(
     session: aiohttp.ClientSession,
     urls: list[str]
     ) -> list[str]:
@@ -153,7 +161,7 @@ async def download_all_data(
     """
     Downloads a list of bulk data .zip files using the provided URLs.
 
-    :param aiohttp.ClientSession session: An aiohttp client session to use for downloads.
+    :param aiohttp.ClientSession session: An aiohttp client session.
 
     :param list[str] urls: A list of URLs to download.
 
@@ -183,9 +191,48 @@ async def download_all_data(
     return valid_paths
 
 
-# %%
+# %% Define function to unzip downloaded data
 
-async def main():
+def unzip_all(zip_paths: list[str], unzipped_dir: str) -> list[str]:
+
+    """
+    Given a list of .zip files with .xml data, extract and dump them into one folder.
+    and dump them (flat) into extract_dir.
+
+    :param list[str] zip_paths: A list of .zip files to reference.
+
+    :param str unzipped_dir: A target directory for unzipped files.
+
+    :return: A list of unzipped .xml files.
+    """
+
+    # Make sure the target directory exists
+
+    os.makedirs(unzipped_dir, exist_ok=True)
+
+
+    # Loop through .zip files to move contents into one flat directory
+
+    for zip_path in zip_paths:
+
+        with zipfile.ZipFile(zip_path, 'r') as zip:
+
+            for file_path in zip.namelist():
+
+                if file_path.lower().endswith('.xml'):
+
+                    file_name = os.path.basename(file_path)
+                    save_path = os.path.join(unzipped_dir, file_name)
+                    
+                    with zip.open(file_path) as source_file, open(save_path, 'wb') as save_file:
+                        save_file.write(source_file.read())
+
+
+# %% Define main executor function
+
+# NOTE: uses an internal main() to allow for CLI script execution
+
+async def _main():
 
     connector = aiohttp.TCPConnector(limit_per_host=5)
     timeout = aiohttp.ClientTimeout(150)
@@ -194,9 +241,14 @@ async def main():
         
         urls = await construct_urls(session=session, congresses=range(113, 120, 1))
 
-        paths = await download_all_data(session=session, urls=urls)
+        paths = await download_all(session=session, urls=urls)
 
-        return paths
+
+    unzip_all(paths, os.path.join(os.getcwd(), 'unzipped'))
+
+
+def main():
+    asyncio.run(_main())
 
 if __name__ == '__main__':
-    print(asyncio.run(main()))
+    main()
