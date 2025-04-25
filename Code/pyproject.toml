@@ -11,12 +11,16 @@ requires-python = ">=3.12"
 dependencies = [
     "aiohttp>=3.11.16",
     "asyncio>=3.4.3",
+    "beautifulsoup4>=4.13.4",
     "ipykernel>=6.29.5",
+    "lxml>=5.4.0",
     "pip>=25.0.1",
+    "polars>=1.27.1",
+    "tqdm>=4.67.1",
 ]
 
 [project.scripts]
-download-data = "data_collection.bulk_data:main"
+download-data = "cli.get_data:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

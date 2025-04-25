@@ -28,13 +28,31 @@ bill_types = [
     'sconres'
 ]
 
-# %% Define function to generate download links
+# %% Define function to validate URLs
 
-async def construct_urls(
+async def validate_url(session: aiohttp.ClientSession, url: str) -> bool:
+    """
+    Validates a URL through a HEAD request to make sure it exists.
+    As of writing this, the 119th Congress doesn't have a second session.
+
+    :param aiohttp.ClientSession session: An aiohttp client session.
+
+    :param str url: The URL to test.
+
+    :return: True if the URL exists and False otherwise.
+    """
+
+    async with session.head(url) as response:
+        return (url, response.status)
+
+
+# %% Define function to generate bill text download links
+
+async def construct_bill_download_urls(
     session: aiohttp.ClientSession,
-    congresses: list[int]
+    congresses: list[int],
+    data_type: str
     ):
-
     """
     Cycle through available bill types and congresses to construct links for use.
 
@@ -42,31 +60,33 @@ async def construct_urls(
 
     :param list[int] congresses: The list of available congressional sessions to use.
 
+    :param str data_type: The GovInfo data to download. This can be:
+
+        - 'BILLS': Raw bill text
+        - 'BILLSTATUS': Additional bill information, including policy area tags
+
     :return list[str]: A list of validated .zip download links.
     """
 
-    async def validate_url(url: str) -> bool:
-        """
-        Validates a URL through a HEAD request to make sure it exists.
-        As of writing this, the 119th Congress doesn't have a second session.
+    if data_type == 'BILLS':
 
-        :param str url: The URL to test.
+        raw_urls = [
+            f"https://www.govinfo.gov/bulkdata/BILLS/{c}/{s}/{t}/BILLS-{c}-{s}-{t}.zip"
+            for c in congresses
+            for s in [1,2]
+            for t in bill_types
+        ]
 
-        :return: True if the URL exists and False otherwise.
-        """
-
-        async with session.head(url) as response:
-            return (url, response.status)
-
-    raw_urls = [
-        f"https://www.govinfo.gov/bulkdata/BILLS/{c}/{s}/{t}/BILLS-{c}-{s}-{t}.zip"
-        for c in congresses
-        for s in [1,2]
-        for t in bill_types
-    ]
+    elif data_type == 'BILLSTATUS':
+    
+        raw_urls = [
+            f"https://www.govinfo.gov/bulkdata/BILLSTATUS/{c}/{t}/BILLSTATUS-{c}-{t}.zip"
+            for c in congresses
+            for t in bill_types
+        ]
 
     tasks = [
-        asyncio.create_task(validate_url(raw_url))
+        asyncio.create_task(validate_url(session=session, url=raw_url))
         for raw_url in raw_urls
     ]
 
@@ -89,7 +109,6 @@ async def download_bulk_data_file(
     url: str,
     save_path: str
     ):
-
     """
     Downloads bulk data from a given URL as a .zip file.
     Implements retry logic depending on the error tyle.
@@ -106,6 +125,7 @@ async def download_bulk_data_file(
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
     await asyncio.sleep(random.uniform(3,10))
+
 
     # Define steps to download and save the zip file
     # If successful, the zip file is saved; otherwise, the function retries or exits
@@ -153,11 +173,11 @@ async def download_bulk_data_file(
 
 # %% Define bulk data download function
 
-async def download_all(
+async def download_text(
     session: aiohttp.ClientSession,
-    urls: list[str]
+    urls: list[str],
+    zipped_dir: str,
     ) -> list[str]:
-
     """
     Downloads a list of bulk data .zip files using the provided URLs.
 
@@ -165,15 +185,21 @@ async def download_all(
 
     :param list[str] urls: A list of URLs to download.
 
+    :param str zipped_dir: A folder path to store downloaded files.
+
+        - This is relative to the current working directory.
+
     :return: Paths to the downloaded .zip files.
     """
+
+    os.makedirs(zipped_dir, exist_ok=True)
 
     tasks = [
         asyncio.create_task(
             download_bulk_data_file(
             session=session,
             url=url,
-            save_path=os.path.join(os.getcwd(), 'zips', url.rsplit(r'/', 1)[-1])
+            save_path=os.path.join(os.getcwd(), zipped_dir, url.rsplit(r'/', 1)[-1])
             )
         )
         for url in urls
@@ -194,7 +220,6 @@ async def download_all(
 # %% Define function to unzip downloaded data
 
 def unzip_all(zip_paths: list[str], unzipped_dir: str) -> list[str]:
-
     """
     Given a list of .zip files with .xml data, extract and dump them into one folder.
     and dump them (flat) into extract_dir.
@@ -228,27 +253,7 @@ def unzip_all(zip_paths: list[str], unzipped_dir: str) -> list[str]:
                         save_file.write(source_file.read())
 
 
-# %% Define main executor function
-
-# NOTE: uses an internal main() to allow for CLI script execution
-
-async def _main():
-
-    connector = aiohttp.TCPConnector(limit_per_host=5)
-    timeout = aiohttp.ClientTimeout(150)
-
-    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
-        
-        urls = await construct_urls(session=session, congresses=range(113, 120, 1))
-
-        paths = await download_all(session=session, urls=urls)
-
-
-    unzip_all(paths, os.path.join(os.getcwd(), 'unzipped'))
-
-
-def main():
-    asyncio.run(_main())
+# %%
 
 if __name__ == '__main__':
-    main()
+    pass

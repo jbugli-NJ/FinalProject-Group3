@@ -2,3 +2,8 @@
 /Code/src/bill_tagger.egg-info
 *.pyc
 /Code/unzipped
+/Code/unzipped_bills
+/Code/zipped_bills
+*.zip
+/Code/unzipped_status
+*.parquet
