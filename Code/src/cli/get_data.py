@@ -11,6 +11,8 @@ import asyncio
 
 import aiohttp
 
+import polars as pl
+
 from data_collection.bulk_data import (
     construct_bill_download_urls,
     download_text,
@@ -26,6 +28,11 @@ from data_collection.policy_areas import get_all_policy_areas
 # NOTE: uses an internal main() to allow for CLI script execution
 
 async def _main():
+    """
+    Executes steps to get tabular data from GovInfo bulk data files.
+    """
+
+    # Download bulk data
 
     connector = aiohttp.TCPConnector(limit_per_host=5)
     timeout = aiohttp.ClientTimeout(150)
@@ -56,17 +63,31 @@ async def _main():
         )
 
 
+    # Unzip files to separate folders
+
     unzip_all(zip_paths=text_paths, unzipped_dir='unzipped_bills')
     unzip_all(zip_paths=status_paths, unzipped_dir='unzipped_status')
 
 
-    text_df = xml_folder_to_dataframe('unzipped_bills')
+    # Build dataframes from unzipped bill text files and other data
 
+    text_df = xml_folder_to_dataframe('unzipped_bills')
     text_df.write_parquet('parsed_bill_text.parquet')
 
     area_df = get_all_policy_areas('unzipped_status')
-
     area_df.write_parquet('policy_areas.parquet')
+
+
+    # Combine dataframes to get training data
+
+    combined_df = pl.read_parquet('policy_areas.parquet').join(
+        pl.read_parquet('parsed_bill_text.parquet'),
+        left_on='bill_text_file_name',
+        right_on='file_name',
+        how='inner'
+    )
+
+    combined_df.write_parquet('input_data.parquet')
 
 
 def main():
