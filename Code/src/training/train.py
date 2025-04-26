@@ -10,7 +10,6 @@ import argparse
 import os
 import time
 import pandas as pd
-import json
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -80,12 +79,10 @@ def train(
             **tf_idf_dict,
             'clf': [LinearSVC(random_state=random_state, dual='auto', verbose=0)],
             'clf__C': [0.5, 1.0, 5.0],
-            'clf__max_iter': [1500, 2500]
+            'clf__max_iter': [500]
         },
         {
-            'tfidf__ngram_range': [(1, 1), (1, 2)],
-            'tfidf__max_df': [0.85, 0.95],
-            'tfidf__min_df': [2, 3],
+            **tf_idf_dict,
             'clf': [LogisticRegression(random_state=random_state, solver='liblinear', max_iter=1000)],
             'clf__C': [0.1, 1.0, 10.0],
             # 'clf__penalty': ['l1', 'l2']
@@ -94,21 +91,7 @@ def train(
             **tf_idf_dict,
             'clf': [MultinomialNB()],
             'clf__alpha': [0.1, 0.5, 1.0]
-        },
-        {
-            **tf_idf_dict,
-            'clf': [RandomForestClassifier(random_state=random_state, n_jobs=-1)],
-            'clf__n_estimators': [100, 200],
-            'clf__max_depth': [10, 20],
-            'clf__min_samples_split': [2, 5]
-        },
-        # {
-        #     **tf_idf_dict,
-        #     'clf': [GradientBoostingClassifier(random_state=random_state)],
-        #     'clf__n_estimators': [50, 100],
-        #     'clf__learning_rate': [0.1],
-        #     'clf__max_depth': [3, 5]
-        # }
+        }
     ]
     print(f"\nParameter grid:\n{param_grid}")
 

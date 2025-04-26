@@ -8,6 +8,8 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import LabelEncoder
 
@@ -140,37 +142,53 @@ def get_top_contributing_words(
 
         - Contribution is estimated by coefficient * tfidf_score
     """
+
     if prediction_label is None or text_tfidf is None:
         return pd.DataFrame(columns=['Word', 'Contribution Score'])
 
     try:
 
-        class_coefficients = model.coef_[0]
+        if isinstance(model, (LinearSVC, LogisticRegression)):
 
-        # Multi-class:
-        # predicted_class_index = label_encoder.transform([prediction_label])[0]
-        # Multi-class: class_coefficients = model.coef_[predicted_class_index]
+            class_coefficients = model.coef_[0]
 
-        # Get words from the vectorizer
+            feature_names = vectorizer.get_feature_names_out()
 
-        feature_names = vectorizer.get_feature_names_out()
+            # Get the indices and TF-IDF scores for input text vector features
+            # NOTE: text_tfidf is a matrix of shape (1, n_features)
 
-        # Get the indices and TF-IDF scores for input text vector features
-        # NOTE: text_tfidf is a matrix of shape (1, n_features)
-
-        feature_indices = text_tfidf.indices
-        tfidf_scores = text_tfidf.data
+            feature_indices = text_tfidf.indices
+            tfidf_scores = text_tfidf.data
 
 
-        # Calculate contribution score for each word present in the input text
+            # Calculate contribution score for each word present in the input text
 
-        word_contributions = [
-            {
-                'Word': feature_names[idx],
-                'Contribution Score': (class_coefficients[idx] * tfidf_score)
-            }
-            for idx, tfidf_score in zip(feature_indices, tfidf_scores)
-        ]
+            word_contributions = [
+                {
+                    'Word': feature_names[idx],
+                    'Contribution Score': (class_coefficients[idx] * tfidf_score)
+                }
+                for idx, tfidf_score in zip(feature_indices, tfidf_scores)
+            ]
+
+        elif isinstance(model, MultinomialNB):
+
+            predicted_class_index = label_encoder.transform([prediction_label])[0]
+
+            class_log_probs = model.feature_log_prob_[predicted_class_index]
+
+            word_contributions = [
+                {
+                    'Word': feature_names[idx],
+                    'Contribution Score': class_log_probs[idx]  
+                }
+                for idx in feature_indices
+            ]
+
+        else:
+
+            return pd.DataFrame(columns=['Word', 'Contribution Score'])
+
 
 
         # Create a DataFrame, sorting by descending contribution score
@@ -179,12 +197,13 @@ def get_top_contributing_words(
         contributions_df = pd.DataFrame(word_contributions)
 
 
-        # Only consider positive contributions for "why" this class was chosen
+        # Return a DataFrame with the most positive contributions
 
         contributions_df = contributions_df[contributions_df['Contribution Score'] > 0]
         contributions_df = contributions_df.sort_values(by='Contribution Score', ascending=False)
 
         return contributions_df.head(top_n)
+
 
     except Exception as e:
         st.error(f"Explainability calculation error: {e}")
