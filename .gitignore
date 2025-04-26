@@ -7,3 +7,4 @@
 *.zip
 /Code/unzipped_status
 *.parquet
+*.joblib

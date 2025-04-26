@@ -49,7 +49,7 @@ def train(
     )
     X_train_tfidf = vect.fit_transform(X_train)
 
-    clf = LinearSVC(random_state=random_state, max_iter=5000, verbose=1)
+    clf = LinearSVC(random_state=random_state, max_iter=500, verbose=1)
     clf.fit(X_train_tfidf, y_train_enc)
 
     y_test_enc = le.transform(y_test)
@@ -80,12 +80,15 @@ def main():
         description='Train and save a policy_area classifier'
     )
     parser.add_argument(
-        '--input', '-i', required=True,
+        '--input', '-i', required=False,
+        type=str,
+        default='input_data.parquet',
         help='Path to .parquet data'
     )
     parser.add_argument(
-        '--save_folder', '-s', required=True,
-        help='Where to save trained classifier (.joblib)'
+        '--save_folder', '-s', required=False,
+        default='model_artifacts',
+        help='Folder to save .joblib files'
     )
     parser.add_argument(
         '--test-size', type=float, default=0.2,
