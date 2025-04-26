@@ -8,8 +8,15 @@ Saves the model, vectorizer, and label-encoder for inference.
 
 import argparse
 import os
+import time
 import pandas as pd
+import json
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
 from sklearn.model_selection import train_test_split
@@ -26,10 +33,19 @@ def load_data(path: str) -> pd.DataFrame:
 # %% Define training method
 
 def train(
-    texts, labels,
+    texts: pd.Series,
+    labels: pd.Series,
     test_size: float = 0.2,
-    random_state: int = 42
+    random_state: int = 42,
+    cv_folds: int = 3
     ):
+    """
+    Splits data, trains a TF-IDF + LinearSVC pipeline using GridSearchCV,
+    evaluates on the test set, extracts the best components, and returns
+    the best classifier, best vectorizer, and label encoder.
+    """
+
+    # Split data and encode labels
 
     X_train, X_test, y_train, y_test = train_test_split(
         texts, labels,
@@ -40,22 +56,100 @@ def train(
 
     le = LabelEncoder()
     y_train_enc = le.fit_transform(y_train)
-
-    vect = TfidfVectorizer(
-        ngram_range=(1, 2),
-        max_df=0.8,
-        min_df=3,
-        stop_words='english'
-    )
-    X_train_tfidf = vect.fit_transform(X_train)
-
-    clf = LinearSVC(random_state=random_state, max_iter=500, verbose=1)
-    clf.fit(X_train_tfidf, y_train_enc)
-
     y_test_enc = le.transform(y_test)
-    y_pred_enc = clf.predict(vect.transform(X_test))
+
+
+    # Define the vectorization/classification pipeline
+
+    pipeline = Pipeline([
+        ('tfidf', TfidfVectorizer(stop_words='english')),
+        ('clf', LinearSVC(random_state=random_state, dual='auto', verbose=0))
+    ])
+
+
+    # Create parameter grids
+
+    tf_idf_dict = {
+        'tfidf__ngram_range': [(1, 1), (1, 2)],
+        'tfidf__max_df': [0.85, 0.95],
+        'tfidf__min_df': [2, 3],
+    }
+
+    param_grid = [
+        {
+            **tf_idf_dict,
+            'clf': [LinearSVC(random_state=random_state, dual='auto', verbose=0)],
+            'clf__C': [0.5, 1.0, 5.0],
+            'clf__max_iter': [1500, 2500]
+        },
+        {
+            'tfidf__ngram_range': [(1, 1), (1, 2)],
+            'tfidf__max_df': [0.85, 0.95],
+            'tfidf__min_df': [2, 3],
+            'clf': [LogisticRegression(random_state=random_state, solver='liblinear', max_iter=1000)],
+            'clf__C': [0.1, 1.0, 10.0],
+            # 'clf__penalty': ['l1', 'l2']
+        },
+        {
+            **tf_idf_dict,
+            'clf': [MultinomialNB()],
+            'clf__alpha': [0.1, 0.5, 1.0]
+        },
+        {
+            **tf_idf_dict,
+            'clf': [RandomForestClassifier(random_state=random_state, n_jobs=-1)],
+            'clf__n_estimators': [100, 200],
+            'clf__max_depth': [10, 20],
+            'clf__min_samples_split': [2, 5]
+        },
+        # {
+        #     **tf_idf_dict,
+        #     'clf': [GradientBoostingClassifier(random_state=random_state)],
+        #     'clf__n_estimators': [50, 100],
+        #     'clf__learning_rate': [0.1],
+        #     'clf__max_depth': [3, 5]
+        # }
+    ]
+    print(f"\nParameter grid:\n{param_grid}")
+
+    # Run grid search
+
+    print(f"\nStarting grid search ({cv_folds} folds)...")
+    start_time = time.time()
+    grid_search = GridSearchCV(
+        pipeline,
+        param_grid,
+        cv=cv_folds,
+        scoring='recall_weighted',
+        n_jobs=-1,
+        verbose=1
+    )
+    grid_search.fit(X_train, y_train_enc)
+    end_time = time.time()
+    print(f"Grid search complete ({end_time - start_time:.2f} seconds)!")
+
+
+    # Report results
+
+    print(f"\nBest parameters:")
+    print(grid_search.best_params_)
+    print(f"\nBest Cross-Validation Accuracy: {grid_search.best_score_:.4f}")
+
+
+    # Return best components
+
+    best_pipeline = grid_search.best_estimator_
+    best_vectorizer = best_pipeline.named_steps['tfidf']
+    best_classifier = best_pipeline.named_steps['svc']
+
+
+    # Evaluate on test set
+
+    X_test_tfidf = best_vectorizer.transform(X_test)
+    y_pred_enc = best_classifier.predict(X_test_tfidf)
+
     print(f'\nTest Accuracy: {accuracy_score(y_test_enc, y_pred_enc):.4f}\n')
-    print('\nClassification Report:')
+    print('Classification Report (Test Set):')
     print(classification_report(
         y_test_enc,
         y_pred_enc,
@@ -63,7 +157,10 @@ def train(
         zero_division=0
     ))
 
-    return clf, vect, le
+    # Return the best classifier, vectorizer, and encoder separately
+
+    return best_classifier, best_vectorizer, le
+
 
 def save_artifacts(save_folder, model, vectorizer, label_encoder):
 
