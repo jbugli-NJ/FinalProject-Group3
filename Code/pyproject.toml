@@ -13,14 +13,19 @@ dependencies = [
     "asyncio>=3.4.3",
     "beautifulsoup4>=4.13.4",
     "ipykernel>=6.29.5",
+    "joblib>=1.4.2",
     "lxml>=5.4.0",
     "pip>=25.0.1",
     "polars>=1.27.1",
+    "pyarrow>=19.0.1",
+    "scikit-learn>=1.6.1",
+    "streamlit>=1.44.1",
     "tqdm>=4.67.1",
 ]
 
 [project.scripts]
-download-data = "cli.get_data:main"
+get-data = "cli.get_data:main"
+run-app = "cli.run_app:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

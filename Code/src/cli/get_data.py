@@ -65,6 +65,8 @@ async def _main():
 
     # Unzip files to separate folders
 
+    print('Unzipping data to flatten folders ...')
+
     unzip_all(zip_paths=text_paths, unzipped_dir='unzipped_bills')
     unzip_all(zip_paths=status_paths, unzipped_dir='unzipped_status')
 
