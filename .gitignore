@@ -8,3 +8,5 @@
 /Code/unzipped_status
 *.parquet
 *.joblib
+*.iml
+*.xml

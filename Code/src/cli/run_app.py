@@ -1,3 +1,7 @@
+"""
+Wraps a CLI abstraction around the 'streamlit run' command.
+"""
+
 # %% Imports
 
 import os

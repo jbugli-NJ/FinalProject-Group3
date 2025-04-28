@@ -30,7 +30,7 @@ bill_types = [
 
 # %% Define function to validate URLs
 
-async def validate_url(session: aiohttp.ClientSession, url: str) -> bool:
+async def validate_url(session: aiohttp.ClientSession, url: str) -> tuple:
     """
     Validates a URL through a HEAD request to make sure it exists.
     As of writing this, the 119th Congress doesn't have a second session.
@@ -43,7 +43,7 @@ async def validate_url(session: aiohttp.ClientSession, url: str) -> bool:
     """
 
     async with session.head(url) as response:
-        return (url, response.status)
+        return url, response.status
 
 
 # %% Define function to generate bill text download links
@@ -113,7 +113,7 @@ async def download_bulk_data_file(
     Downloads bulk data from a given URL as a .zip file.
     Implements retry logic depending on the error tyle.
    
-    :param aiohttp.ClientSession: An aiohttp client session.
+    :param aiohttp.ClientSession session: An aiohttp client session.
 
     :param str url: A valid .zip download link.
 
@@ -208,7 +208,7 @@ async def download_text(
     raw_paths = await asyncio.gather(*tasks, return_exceptions=True)
 
     valid_paths = [r for r in raw_paths if not isinstance(r, Exception) and r is not None]
-    invalid_paths = [r for r in raw_paths if isinstance(r, Exception) or r is not None]
+    invalid_paths = [r for r in raw_paths if isinstance(r, Exception) or r is None]
 
     if len(invalid_paths) > 0:
 
@@ -219,10 +219,9 @@ async def download_text(
 
 # %% Define function to unzip downloaded data
 
-def unzip_all(zip_paths: list[str], unzipped_dir: str) -> list[str]:
+def unzip_all(zip_paths: list[str], unzipped_dir: str):
     """
     Given a list of .zip files with .xml data, extract and dump them into one folder.
-    and dump them (flat) into extract_dir.
 
     :param list[str] zip_paths: A list of .zip files to reference.
 

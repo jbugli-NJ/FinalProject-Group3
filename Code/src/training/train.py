@@ -23,12 +23,6 @@ from sklearn.metrics import accuracy_score, classification_report
 import joblib
 
 
-# %% Define data loading function
-
-def load_data(path: str) -> pd.DataFrame:
-    return pd.read_parquet(path)
-
-
 # %% Define training method
 
 def train(
@@ -39,9 +33,27 @@ def train(
     cv_folds: int = 3
     ):
     """
-    Splits data, trains a TF-IDF + LinearSVC pipeline using GridSearchCV,
-    evaluates on the test set, extracts the best components, and returns
-    the best classifier, best vectorizer, and label encoder.
+    Executes training steps, including:
+    1. Splitting the data
+    2. Using a grid search pipeline to test models
+    3. Evaluating results
+    4. Returning the best model's artifacts for inference
+
+    :param pd.Series texts: An input text series to process.
+
+    :param pd.Series labels: A target policy area label series to process.
+
+    :param float test_size: The size of the test split.
+
+    :param int random_state: A random state seed.
+
+    :param cv_folds: The number of folds for cross-validation.
+
+    :return pd.DataFrame: A three-item tuple with:
+
+        - The best classifier
+        - The best vectorizer
+        - The label encoder
     """
 
     # Split data and encode labels
@@ -59,6 +71,7 @@ def train(
 
 
     # Define the vectorization/classification pipeline
+    # NOTE: 'clf' is a placeholder for models
 
     pipeline = Pipeline([
         ('tfidf', TfidfVectorizer(stop_words='english')),
@@ -95,6 +108,7 @@ def train(
     ]
     print(f"\nParameter grid:\n{param_grid}")
 
+
     # Run grid search
 
     print(f"\nStarting grid search ({cv_folds} folds)...")
@@ -107,6 +121,7 @@ def train(
         n_jobs=-1,
         verbose=1
     )
+
     grid_search.fit(X_train, y_train_enc)
     end_time = time.time()
     print(f"Grid search complete ({end_time - start_time:.2f} seconds)!")
@@ -146,8 +161,25 @@ def train(
 
 
 def save_artifacts(save_folder, model, vectorizer, label_encoder):
+    """
+    Save the best model, vectorizer, and label encoder in a folder for inference.
+    All three are saved with the .joblib extension.
+
+    :param str save_folder: The save folder path.
+
+    :param model: The model to save.
+
+    :param vectorizer: The vectorizer to save.
+
+    :param label_encoder: The label encoder to save.
+    """
+
+    # Make sure the directory exists
 
     os.makedirs(save_folder, exist_ok=True)
+
+
+    # Save artifacts
 
     joblib.dump(model, os.path.join(save_folder,'model.joblib'))
     joblib.dump(vectorizer, os.path.join(save_folder,'vectorizer.joblib'))
@@ -180,7 +212,7 @@ def main():
     )
     args = parser.parse_args()
 
-    df = load_data(args.input)
+    df = pd.read_parquet(args.input)
     texts = df['bill_text'].fillna('').values
     labels = df['policy_area'].fillna('').values
 

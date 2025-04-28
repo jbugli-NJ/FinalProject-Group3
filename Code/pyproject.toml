@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.scripts]
-download-data = "cli.get_data:main"
+get-data = "cli.get_data:main"
 run-app = "cli.run_app:main"
 
 [tool.setuptools]
