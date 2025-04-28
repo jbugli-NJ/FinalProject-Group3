@@ -82,29 +82,30 @@ def train(
     # Create parameter grids
 
     tf_idf_dict = {
-        'tfidf__ngram_range': [(1, 1), (1, 2)],
-        'tfidf__max_df': [0.85, 0.95],
-        'tfidf__min_df': [2, 3],
+        'tfidf__ngram_range': [(1, 2)], # [(1, 1), (1, 2)],
+        'tfidf__max_df': [0.85],
+        'tfidf__min_df': [2], #[2, 3],
     }
 
     param_grid = [
         {
             **tf_idf_dict,
-            'clf': [LinearSVC(random_state=random_state, dual='auto', verbose=0)],
-            'clf__C': [0.5, 1.0, 5.0],
-            'clf__max_iter': [500]
+            'clf': [LinearSVC(random_state=random_state, dual='auto', verbose=1)],
+            'clf__C': [1.0], # [0.5, 1.0, 5.0],
+            'clf__max_iter': [250]
         },
-        {
-            **tf_idf_dict,
-            'clf': [LogisticRegression(random_state=random_state, solver='liblinear', max_iter=1000)],
-            'clf__C': [0.1, 1.0, 10.0],
-            # 'clf__penalty': ['l1', 'l2']
-        },
-        {
-            **tf_idf_dict,
-            'clf': [MultinomialNB()],
-            'clf__alpha': [0.1, 0.5, 1.0]
-        }
+        # {
+        #     **tf_idf_dict,
+        #     'clf': [LogisticRegression(random_state=random_state, solver='liblinear')],
+        #     'clf__C': [1.0], # [0.5, 1.0, 5.0],
+        #     'clf__max_iter': [250],
+        #     # 'clf__penalty': ['l1', 'l2']
+        # },
+        # {
+        #     **tf_idf_dict,
+        #     'clf': [MultinomialNB()],
+        #     'clf__alpha': [0.5], # [0.5, 1.0, 5.0],
+        # }
     ]
     print(f"\nParameter grid:\n{param_grid}")
 
