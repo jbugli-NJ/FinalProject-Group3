@@ -119,7 +119,6 @@ def train(
         param_grid,
         cv=cv_folds,
         scoring='recall_weighted',
-        n_jobs=-1,
         verbose=1
     )
 
