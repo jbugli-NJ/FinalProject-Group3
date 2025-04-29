@@ -19,11 +19,15 @@ jobs:
         with:
           python-version: '3.12.4'
 
+      - name: Move to Code folder
+        run: cd Code
+
       - name: Install the project
+        working-directory: ./Code
         run: uv sync --locked --all-extras --dev
 
       - name: Run training script
+        working-directory: ./Code
         run: |
-          cd Code
           get-data
           uv run src/training/train.py
