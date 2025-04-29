@@ -24,5 +24,6 @@ jobs:
 
       - name: Run training script
         run: |
+          cd Code
           get-data
           uv run src/training/train.py
