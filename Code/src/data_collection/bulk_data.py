@@ -211,8 +211,7 @@ async def download_text(
     invalid_paths = [r for r in raw_paths if isinstance(r, Exception) or r is None]
 
     if len(invalid_paths) > 0:
-
-        print(f"The following expected downloads failed:\n{'\n'.join(invalid_paths)}\n\n")
+        print(f"{len(invalid_paths)} expected downloads failed!")
 
     return valid_paths
 

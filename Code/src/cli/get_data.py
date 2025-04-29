@@ -35,7 +35,7 @@ async def _main():
     # Download bulk data
 
     connector = aiohttp.TCPConnector(limit_per_host=5)
-    timeout = aiohttp.ClientTimeout(150)
+    timeout = aiohttp.ClientTimeout(600)
 
     async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
         
