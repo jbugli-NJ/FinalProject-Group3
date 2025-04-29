@@ -29,5 +29,5 @@ jobs:
       - name: Run training script
         working-directory: ./Code
         run: |
-          get-data
+          uv run get-data
           uv run src/training/train.py
