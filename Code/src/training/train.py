@@ -94,18 +94,18 @@ def train(
             'clf__C': [1.0], # [0.5, 1.0, 5.0],
             'clf__max_iter': [250]
         },
-        # {
-        #     **tf_idf_dict,
-        #     'clf': [LogisticRegression(random_state=random_state, solver='liblinear')],
-        #     'clf__C': [1.0], # [0.5, 1.0, 5.0],
-        #     'clf__max_iter': [250],
-        #     # 'clf__penalty': ['l1', 'l2']
-        # },
-        # {
-        #     **tf_idf_dict,
-        #     'clf': [MultinomialNB()],
-        #     'clf__alpha': [0.5], # [0.5, 1.0, 5.0],
-        # }
+        {
+            **tf_idf_dict,
+            'clf': [LogisticRegression(random_state=random_state, solver='liblinear', verbose=1)],
+            'clf__C': [1.0], # [0.5, 1.0, 5.0],
+            'clf__max_iter': [250],
+            # 'clf__penalty': ['l1', 'l2']
+        },
+        {
+            **tf_idf_dict,
+            'clf': [MultinomialNB()],
+            'clf__alpha': [0.5], # [0.5, 1.0, 5.0],
+        }
     ]
     print(f"\nParameter grid:\n{param_grid}")
 
@@ -127,19 +127,42 @@ def train(
     end_time = time.time()
     print(f"Grid search complete ({end_time - start_time:.2f} seconds)!")
 
+    scoring_metric = 'recall_weighted'
+    
+    print(f"\n--- Sorted Grid Search Results ---")
+    results_df = pd.DataFrame(grid_search.cv_results_)
 
-    # Report results
+    results_df = results_df.sort_values(by=['rank_test_score'])
+
+    display_cols = [
+        'params',
+        'mean_test_score',
+        'std_test_score',
+        'rank_test_score',
+        'mean_fit_time'
+    ]
+
+    display_cols = [col for col in display_cols if col in results_df.columns]
+
+    pd.set_option('display.max_colwidth', None)
+    print(results_df[display_cols].to_string(index=False))
+    pd.reset_option('display.max_colwidth')
+
+
+    # Report best results
 
     print(f"\nBest parameters:")
     print(grid_search.best_params_)
-    print(f"\nBest Cross-Validation Accuracy: {grid_search.best_score_:.4f}")
+
+    # Note: grid_search.best_score_ uses the mean test score of the best estimator
+    print(f"\nBest Cross-Validation {scoring_metric}: {grid_search.best_score_:.4f}")
 
 
     # Return best components
 
     best_pipeline = grid_search.best_estimator_
     best_vectorizer = best_pipeline.named_steps['tfidf']
-    best_classifier = best_pipeline.named_steps['svc']
+    best_classifier = best_pipeline.named_steps['clf']
 
 
     # Evaluate on test set
@@ -153,6 +176,7 @@ def train(
         y_test_enc,
         y_pred_enc,
         target_names=le.classes_,
+        labels=range(len(le.classes_)),
         zero_division=0
     ))
 
