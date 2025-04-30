@@ -8,6 +8,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import LabelEncoder
 
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
 from scipy.sparse import spmatrix
 
 
@@ -132,6 +135,7 @@ def get_top_contributing_words(
     text_tfidf: spmatrix,
     model: LinearSVC,
     vectorizer: TfidfVectorizer,
+    label_encoder: LabelEncoder,
     top_n: int = 10
     ):
     """
@@ -155,7 +159,9 @@ def get_top_contributing_words(
 
     try:
 
-        class_coefficients = model.coef_[0]
+        # class_coefficients = model.coef_[0]
+        class_idx = list(label_encoder.classes_).index(prediction_label)
+        class_coefficients = model.coef_[class_idx]
 
         feature_names = vectorizer.get_feature_names_out()
 
@@ -185,9 +191,9 @@ def get_top_contributing_words(
 
         # Return a DataFrame with the most positive contributions
 
-        contributions_df = contributions_df[
-            contributions_df['Contribution Score'] > 0
-        ]
+        # contributions_df = contributions_df[
+        #     contributions_df['Contribution Score'] > 0
+        # ]
         contributions_df = contributions_df.sort_values(
             by='Contribution Score',
             ascending=False
@@ -272,27 +278,51 @@ def initialize():
                         st.subheader('Explanation:')
                         st.markdown(f"Top {TOP_N_WORDS} prediction contributors: ")
 
+
+                        # Get top contributing words
+
                         top_words_df = get_top_contributing_words(
-                            input_text,
-                            predicted_label,
-                            text_tfidf_vector,
-                            model,
-                            vectorizer,
-                            label_encoder,
+                            prediction_label=predicted_label,
+                            text_tfidf=text_tfidf_vector,
+                            model=model,
+                            vectorizer=vectorizer,
+                            label_encoder = label_encoder,
                             top_n=TOP_N_WORDS
                         )
 
-                        # TODO: Word cloud?
-
                         if not top_words_df.empty:
 
-                            st.dataframe(
-                                top_words_df.style.format(
-                                    {'Contribution Score': '{:.4f}'}
-                                ),
-                                use_container_width=True,
-                                hide_index=True
+                            left_col, right_col = st.columns(2)
+
+
+                            # Set up a bar chart and word cloud for display
+
+                            with left_col:
+                                df = top_words_df.sort_values(
+                                    'Contribution Score',
+                                    ascending=True
                                 )
+                                fig, ax = plt.subplots(figsize=(6, TOP_N_WORDS * 0.4))
+                                ax.barh(df['Word'], df['Contribution Score'])
+                                ax.set_xlabel('Contribution Score')
+                                ax.set_title('Top Contributors')
+                                fig.tight_layout()
+                                st.subheader("Bar Chart")
+                                st.pyplot(fig)
+
+                            with right_col:
+                                freqs = dict(zip(
+                                    top_words_df['Word'],
+                                    top_words_df['Contribution Score']
+                                ))
+                                wc = WordCloud(
+                                    width=400,
+                                    height=400,
+                                    background_color='white',
+                                    scale=3
+                                ).generate_from_frequencies(freqs)
+                                st.subheader("Word Cloud")
+                                st.image(wc.to_array(), use_container_width=True)
 
                         else:
                             st.warning('No significant contributors identified!')
