@@ -16,30 +16,35 @@ from scipy.sparse import spmatrix
 
 # %% Provide paths to .joblib files
 
-ARTIFACTS_DIR = 'model_artifacts'
-MODEL_PATH = os.path.join(ARTIFACTS_DIR, 'model.joblib')
-VECTORIZER_PATH = os.path.join(ARTIFACTS_DIR, 'vectorizer.joblib')
-LABEL_ENCODER_PATH = os.path.join(ARTIFACTS_DIR, 'label_encoder.joblib')
 TOP_N_WORDS = 15
 
 
 # %% Define function to load artifacts
 
 @st.cache_resource
-def load_artifacts(model_path: str, vectorizer_path: str, label_encoder_path: str):
+def load_artifacts(artifacts_dir: str):
     """
     Loads the model, vectorizer, and label encoder.
 
-    :param str model_path: The path to the stored model .joblib.
+    :param str artifacts_dir: The path to a directory containing 3 artifacts:
 
-    :param str model_path: The path to the stored TF-IDF vectorizer .joblib.
+        - the stored model .joblib.
 
-    :param str model_path: The path to the stored label encoder .joblib.
+        - the stored TF-IDF vectorizer .joblib.
+
+        - the stored label encoder .joblib.
     """
+
+    # Construct paths
+
+    model_path = os.path.join(artifacts_dir, 'model.joblib')
+    vectorizer_path = os.path.join(artifacts_dir, 'vectorizer.joblib')
+    label_encoder_path = os.path.join(artifacts_dir, 'label_encoder.joblib')
+
 
     # Check if the directory is found
 
-    if os.path.exists(ARTIFACTS_DIR) == False:
+    if os.path.exists(artifacts_dir) == False:
         print('Specified artifact folder not found!')
         return None, None, None
 
@@ -55,7 +60,7 @@ def load_artifacts(model_path: str, vectorizer_path: str, label_encoder_path: st
 
     except FileNotFoundError:
 
-        st.error(f"Could not find file in: {ARTIFACTS_DIR}"
+        st.error(f"Could not find file in: {artifacts_dir}"
                  f"Ensure '{os.path.basename(model_path)}', "
                  f"'{os.path.basename(vectorizer_path)}', and "
                  f"'{os.path.basename(label_encoder_path)}' exist.")
@@ -214,6 +219,15 @@ def initialize():
     Main function initializing the UI and processing inputs.
     """
 
+    if os.getenv('ARTIFACTS_DIR') is not None:
+        artifacts_dir = os.getenv('ARTIFACTS_DIR')
+    else:
+        artifacts_dir = 'model_artifacts'
+
+    if os.path.exists(artifacts_dir) == False:
+        print(f"Artifacts directory not found: {artifacts_dir}")
+
+
     # Define app layout
 
     st.set_page_config(page_title='Policy Area Classifier', layout='wide')
@@ -222,13 +236,8 @@ def initialize():
 
 
     # Load artifacts
-    # TODO: Argparse
 
-    model, vectorizer, label_encoder = load_artifacts(
-        MODEL_PATH,
-        VECTORIZER_PATH,
-        LABEL_ENCODER_PATH
-    )
+    model, vectorizer, label_encoder = load_artifacts(artifacts_dir)
 
 
     # Set up interface elements
