@@ -91,20 +91,20 @@ def train(
         {
             **tf_idf_dict,
             'clf': [LinearSVC(random_state=random_state, dual='auto', verbose=0)],
-            'clf__C': [1.0, 5.0],
+            'clf__C': [5.0],
             'clf__max_iter': [250]
         },
-        # {
-        #     **tf_idf_dict,
-        #     'clf': [LogisticRegression(random_state=random_state, solver='liblinear', verbose=1)],
-        #     'clf__C': [1.0],
-        #     'clf__max_iter': [250],
-        # },
-        # {
-        #     **tf_idf_dict,
-        #     'clf': [MultinomialNB()],
-        #     'clf__alpha': [0.5],
-        # }
+        {
+            **tf_idf_dict,
+            'clf': [LogisticRegression(random_state=random_state, solver='liblinear', verbose=1)],
+            'clf__C': [1.0],
+            'clf__max_iter': [250],
+        },
+        {
+            **tf_idf_dict,
+            'clf': [MultinomialNB()],
+            'clf__alpha': [0.5],
+        }
     ]
     print(f"\nParameter grid:\n{param_grid}")
 
