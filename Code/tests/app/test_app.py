@@ -1,3 +1,7 @@
+"""
+Tests for src/app/app.py
+Generated with a lot of AI assistance
+"""
 # %% Imports
 
 import os
