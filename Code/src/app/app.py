@@ -1,17 +1,14 @@
 # %% Imports
 
-import sys
-import subprocess
 import streamlit as st
 import joblib
 import os
-import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import LabelEncoder
+
+from scipy.sparse import spmatrix
 
 
 # %% Provide paths to .joblib files
@@ -56,8 +53,9 @@ def load_artifacts(model_path: str, vectorizer_path: str, label_encoder_path: st
     except FileNotFoundError:
 
         st.error(f"Could not find file in: {ARTIFACTS_DIR}"
-                 f"Ensure '{os.path.basename(model_path)}', '{os.path.basename(vectorizer_path)}', "
-                 f"and '{os.path.basename(label_encoder_path)}' exist.")
+                 f"Ensure '{os.path.basename(model_path)}', "
+                 f"'{os.path.basename(vectorizer_path)}', and "
+                 f"'{os.path.basename(label_encoder_path)}' exist.")
         return None, None, None
     
     except Exception as e:
@@ -130,17 +128,26 @@ def predict_policy_area(
 # %% Define function to support explainability
 
 def get_top_contributing_words(
-    text,
-    prediction_label,
-    text_tfidf, model,
-    vectorizer,
-    label_encoder,
-    top_n=10
+    prediction_label: str,
+    text_tfidf: spmatrix,
+    model: LinearSVC,
+    vectorizer: TfidfVectorizer,
+    top_n: int = 10
     ):
     """
     Identifies the biggest contributors to the output class.
 
         - Contribution is estimated by coefficient * tfidf_score
+
+    :param str prediction_label: The predicted label.
+
+    :param spmatrix text_tfidf: The TF-IDF matrix.
+
+    :param LinearSVC model: The loaded model.
+
+    :param TfidfVectorizer vectorizer: The loaded TF-IDF vectorizer.
+
+    :param int top_n: The number of words to return.
     """
 
     if prediction_label is None or text_tfidf is None:
@@ -148,47 +155,26 @@ def get_top_contributing_words(
 
     try:
 
-        if isinstance(model, (LinearSVC, LogisticRegression)):
+        class_coefficients = model.coef_[0]
 
-            class_coefficients = model.coef_[0]
+        feature_names = vectorizer.get_feature_names_out()
 
-            feature_names = vectorizer.get_feature_names_out()
+        # Get the indices and TF-IDF scores for input text vector features
+        # NOTE: text_tfidf is a matrix of shape (1, n_features)
 
-            # Get the indices and TF-IDF scores for input text vector features
-            # NOTE: text_tfidf is a matrix of shape (1, n_features)
-
-            feature_indices = text_tfidf.indices
-            tfidf_scores = text_tfidf.data
+        feature_indices = text_tfidf.indices
+        tfidf_scores = text_tfidf.data
 
 
-            # Calculate contribution score for each word present in the input text
+        # Calculate contribution score for each word present in the input text
 
-            word_contributions = [
-                {
-                    'Word': feature_names[idx],
-                    'Contribution Score': (class_coefficients[idx] * tfidf_score)
-                }
-                for idx, tfidf_score in zip(feature_indices, tfidf_scores)
-            ]
-
-        elif isinstance(model, MultinomialNB):
-
-            predicted_class_index = label_encoder.transform([prediction_label])[0]
-
-            class_log_probs = model.feature_log_prob_[predicted_class_index]
-
-            word_contributions = [
-                {
-                    'Word': feature_names[idx],
-                    'Contribution Score': class_log_probs[idx]  
-                }
-                for idx in feature_indices
-            ]
-
-        else:
-
-            return pd.DataFrame(columns=['Word', 'Contribution Score'])
-
+        word_contributions = [
+            {
+                'Word': feature_names[idx],
+                'Contribution Score': (class_coefficients[idx] * tfidf_score)
+            }
+            for idx, tfidf_score in zip(feature_indices, tfidf_scores)
+        ]
 
 
         # Create a DataFrame, sorting by descending contribution score
@@ -199,8 +185,13 @@ def get_top_contributing_words(
 
         # Return a DataFrame with the most positive contributions
 
-        contributions_df = contributions_df[contributions_df['Contribution Score'] > 0]
-        contributions_df = contributions_df.sort_values(by='Contribution Score', ascending=False)
+        contributions_df = contributions_df[
+            contributions_df['Contribution Score'] > 0
+        ]
+        contributions_df = contributions_df.sort_values(
+            by='Contribution Score',
+            ascending=False
+        )
 
         return contributions_df.head(top_n)
 
@@ -213,6 +204,9 @@ def get_top_contributing_words(
 # %% Define UI setup / input processing function
 
 def initialize():
+    """
+    Main function initializing the UI and processing inputs.
+    """
 
     # Define app layout
 
@@ -259,11 +253,19 @@ def initialize():
 
                     # Attempt prediction
 
-                    predicted_label, text_tfidf_vector = predict_policy_area(input_text, model, vectorizer, label_encoder)
+                    predicted_label, text_tfidf_vector = predict_policy_area(
+                        text=input_text,
+                        model=model,
+                        vectorizer=vectorizer,
+                        label_encoder=label_encoder
+                    )
 
                     if predicted_label:
                         st.subheader('Prediction Result:')
-                        st.markdown(f"The predicted policy area is: **{predicted_label}**")
+                        st.markdown(
+                            "The predicted policy area is: "
+                            f"**{predicted_label}**"
+                        )
 
                         # Explainability
 
@@ -285,7 +287,9 @@ def initialize():
                         if not top_words_df.empty:
 
                             st.dataframe(
-                                top_words_df.style.format({'Contribution Score': '{:.4f}'}),
+                                top_words_df.style.format(
+                                    {'Contribution Score': '{:.4f}'}
+                                ),
                                 use_container_width=True,
                                 hide_index=True
                                 )
@@ -299,8 +303,6 @@ def initialize():
     else:
         st.error('Model artifacts could not be loaded!')
 
-
-# Define steps taken when run directly (used in CLI script)
 
 if __name__ == '__main__':
     initialize()

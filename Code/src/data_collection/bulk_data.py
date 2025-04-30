@@ -71,7 +71,8 @@ async def construct_bill_download_urls(
     if data_type == 'BILLS':
 
         raw_urls = [
-            f"https://www.govinfo.gov/bulkdata/BILLS/{c}/{s}/{t}/BILLS-{c}-{s}-{t}.zip"
+            "https://www.govinfo.gov/bulkdata/"
+            f"BILLS/{c}/{s}/{t}/BILLS-{c}-{s}-{t}.zip"
             for c in congresses
             for s in [1,2]
             for t in bill_types
@@ -80,7 +81,8 @@ async def construct_bill_download_urls(
     elif data_type == 'BILLSTATUS':
     
         raw_urls = [
-            f"https://www.govinfo.gov/bulkdata/BILLSTATUS/{c}/{t}/BILLSTATUS-{c}-{t}.zip"
+            "https://www.govinfo.gov/bulkdata/"
+            f"BILLSTATUS/{c}/{t}/BILLSTATUS-{c}-{t}.zip"
             for c in congresses
             for t in bill_types
         ]
@@ -207,12 +209,23 @@ async def download_text(
 
     raw_paths = await asyncio.gather(*tasks, return_exceptions=True)
 
-    valid_paths = [r for r in raw_paths if not isinstance(r, Exception) and r is not None]
-    invalid_paths = [r for r in raw_paths if isinstance(r, Exception) or r is None]
+    valid_paths = [
+        r
+        for r in raw_paths 
+        if not isinstance(r, Exception) and r is not None
+    ]
+    invalid_paths = [
+        r 
+        for r in raw_paths
+        if isinstance(r, Exception) or r is None
+    ]
 
     if len(invalid_paths) > 0:
 
-        print(f"The following expected downloads failed:\n{'\n'.join(invalid_paths)}\n\n")
+        print(
+            f"The following expected downloads failed:"
+            "\n{'\n'.join(invalid_paths)}\n\n"
+        )
 
     return valid_paths
 
@@ -248,7 +261,9 @@ def unzip_all(zip_paths: list[str], unzipped_dir: str):
                     file_name = os.path.basename(file_path)
                     save_path = os.path.join(unzipped_dir, file_name)
                     
-                    with zip.open(file_path) as source_file, open(save_path, 'wb') as save_file:
+                    with zip.open(file_path) as source_file, \
+                        open(save_path, 'wb') as save_file:
+
                         save_file.write(source_file.read())
 
 

@@ -10,7 +10,6 @@ import argparse
 import os
 import time
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
@@ -87,16 +86,26 @@ def train(
         'tfidf__min_df': [2], #[2, 3],
     }
 
+
+    # NOTE: Rejected models have been commented out
+
     param_grid = [
         {
             **tf_idf_dict,
-            'clf': [LinearSVC(random_state=random_state, dual='auto', verbose=1)],
+            'clf': [LinearSVC(
+                random_state=random_state,
+                dual='auto', verbose=1
+            )],
             'clf__C': [0.5, 5.0], # [1.0]
             'clf__max_iter': [250]
         },
         # {
         #     **tf_idf_dict,
-        #     'clf': [LogisticRegression(random_state=random_state, solver='liblinear', verbose=1)],
+        #     'clf': [LogisticRegression(
+        #         random_state=random_state,
+        #         solver='liblinear',
+        #         verbose=1
+        #     )],
         #     'clf__C': [1.0],
         #     'clf__max_iter': [250],
         # },
@@ -179,6 +188,7 @@ def train(
         zero_division=0
     ))
 
+
     # Return the best classifier, vectorizer, and encoder separately
 
     return best_classifier, best_vectorizer, le
@@ -212,6 +222,8 @@ def save_artifacts(save_folder, model, vectorizer, label_encoder):
 
 def main():
 
+    # Craft and parse arguments
+
     parser = argparse.ArgumentParser(
         description='Train and save a policy_area classifier'
     )
@@ -236,9 +248,15 @@ def main():
     )
     args = parser.parse_args()
 
+
+    # Read the specified input data file
+
     df = pd.read_parquet(args.input)
     texts = df['bill_text'].fillna('').values
     labels = df['policy_area'].fillna('').values
+
+
+    # Execute the training function and save results
 
     model, vect, le = train(
         texts, labels,
