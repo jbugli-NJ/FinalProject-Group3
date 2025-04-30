@@ -34,15 +34,17 @@ Some important files remain outside of src:
 
 ## Local development and use
 
-The following steps are required for local use:
+The following steps are required for local use.
+Some commands may require OS-based alterations.
 
-1. Clone the repository and navigate to the 'Code' folder (the root for all items below)
+1. Clone the repository and navigate to the 'Code' folder.
+    - Remain in the 'Code' directory, serving as the root for all items below
 
-2. Create and activate a virtual environment
+2. Create a virtual environment
 
 3. Install all dependencies
-    - Standard: "pip install -e ."
-    - With uv: "uv sync"
+    - Standard: activate the .venv and use "pip install -e ."
+    - With uv: "uv sync" and activate the .venv afterwards
 
     [Skip steps 4-5 below for inference-only use]
 
@@ -62,6 +64,6 @@ The following steps are required for local use:
     - An artifacts folder can be downloaded from the Google Drive link provided earlier
 
 7. Run the app
-    - If you saved the artifacts outside of the default 'model_artifacts' directory, specify the path with the 'ARTIFACTS_DIR' environment variable
+    - If you saved the artifacts outside of the default 'Code/model_artifacts' directory, specify the path with the 'ARTIFACTS_DIR' environment variable
     - Use the "run-app" command
         - This is identical to "streamlit run src/app/app.py"
