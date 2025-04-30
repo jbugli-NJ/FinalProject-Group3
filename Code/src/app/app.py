@@ -8,35 +8,43 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import LabelEncoder
 
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
 from scipy.sparse import spmatrix
 
 
 # %% Provide paths to .joblib files
 
-ARTIFACTS_DIR = 'model_artifacts'
-MODEL_PATH = os.path.join(ARTIFACTS_DIR, 'model.joblib')
-VECTORIZER_PATH = os.path.join(ARTIFACTS_DIR, 'vectorizer.joblib')
-LABEL_ENCODER_PATH = os.path.join(ARTIFACTS_DIR, 'label_encoder.joblib')
 TOP_N_WORDS = 15
 
 
 # %% Define function to load artifacts
 
 @st.cache_resource
-def load_artifacts(model_path: str, vectorizer_path: str, label_encoder_path: str):
+def load_artifacts(artifacts_dir: str):
     """
     Loads the model, vectorizer, and label encoder.
 
-    :param str model_path: The path to the stored model .joblib.
+    :param str artifacts_dir: The path to a directory containing 3 artifacts:
 
-    :param str model_path: The path to the stored TF-IDF vectorizer .joblib.
+        - the stored model .joblib.
 
-    :param str model_path: The path to the stored label encoder .joblib.
+        - the stored TF-IDF vectorizer .joblib.
+
+        - the stored label encoder .joblib.
     """
+
+    # Construct paths
+
+    model_path = os.path.join(artifacts_dir, 'model.joblib')
+    vectorizer_path = os.path.join(artifacts_dir, 'vectorizer.joblib')
+    label_encoder_path = os.path.join(artifacts_dir, 'label_encoder.joblib')
+
 
     # Check if the directory is found
 
-    if os.path.exists(ARTIFACTS_DIR) == False:
+    if os.path.exists(artifacts_dir) == False:
         print('Specified artifact folder not found!')
         return None, None, None
 
@@ -52,7 +60,7 @@ def load_artifacts(model_path: str, vectorizer_path: str, label_encoder_path: st
 
     except FileNotFoundError:
 
-        st.error(f"Could not find file in: {ARTIFACTS_DIR}"
+        st.error(f"Could not find file in: {artifacts_dir}"
                  f"Ensure '{os.path.basename(model_path)}', "
                  f"'{os.path.basename(vectorizer_path)}', and "
                  f"'{os.path.basename(label_encoder_path)}' exist.")
@@ -132,6 +140,7 @@ def get_top_contributing_words(
     text_tfidf: spmatrix,
     model: LinearSVC,
     vectorizer: TfidfVectorizer,
+    label_encoder: LabelEncoder,
     top_n: int = 10
     ):
     """
@@ -155,7 +164,9 @@ def get_top_contributing_words(
 
     try:
 
-        class_coefficients = model.coef_[0]
+        # class_coefficients = model.coef_[0]
+        class_idx = list(label_encoder.classes_).index(prediction_label)
+        class_coefficients = model.coef_[class_idx]
 
         feature_names = vectorizer.get_feature_names_out()
 
@@ -185,9 +196,9 @@ def get_top_contributing_words(
 
         # Return a DataFrame with the most positive contributions
 
-        contributions_df = contributions_df[
-            contributions_df['Contribution Score'] > 0
-        ]
+        # contributions_df = contributions_df[
+        #     contributions_df['Contribution Score'] > 0
+        # ]
         contributions_df = contributions_df.sort_values(
             by='Contribution Score',
             ascending=False
@@ -208,6 +219,15 @@ def initialize():
     Main function initializing the UI and processing inputs.
     """
 
+    if os.getenv('ARTIFACTS_DIR') is not None:
+        artifacts_dir = os.getenv('ARTIFACTS_DIR')
+    else:
+        artifacts_dir = 'model_artifacts'
+
+    if os.path.exists(artifacts_dir) == False:
+        print(f"Artifacts directory not found: {artifacts_dir}")
+
+
     # Define app layout
 
     st.set_page_config(page_title='Policy Area Classifier', layout='wide')
@@ -216,13 +236,8 @@ def initialize():
 
 
     # Load artifacts
-    # TODO: Argparse
 
-    model, vectorizer, label_encoder = load_artifacts(
-        MODEL_PATH,
-        VECTORIZER_PATH,
-        LABEL_ENCODER_PATH
-    )
+    model, vectorizer, label_encoder = load_artifacts(artifacts_dir)
 
 
     # Set up interface elements
@@ -272,27 +287,51 @@ def initialize():
                         st.subheader('Explanation:')
                         st.markdown(f"Top {TOP_N_WORDS} prediction contributors: ")
 
+
+                        # Get top contributing words
+
                         top_words_df = get_top_contributing_words(
-                            input_text,
-                            predicted_label,
-                            text_tfidf_vector,
-                            model,
-                            vectorizer,
-                            label_encoder,
+                            prediction_label=predicted_label,
+                            text_tfidf=text_tfidf_vector,
+                            model=model,
+                            vectorizer=vectorizer,
+                            label_encoder = label_encoder,
                             top_n=TOP_N_WORDS
                         )
 
-                        # TODO: Word cloud?
-
                         if not top_words_df.empty:
 
-                            st.dataframe(
-                                top_words_df.style.format(
-                                    {'Contribution Score': '{:.4f}'}
-                                ),
-                                use_container_width=True,
-                                hide_index=True
+                            left_col, right_col = st.columns(2)
+
+
+                            # Set up a bar chart and word cloud for display
+
+                            with left_col:
+                                df = top_words_df.sort_values(
+                                    'Contribution Score',
+                                    ascending=True
                                 )
+                                fig, ax = plt.subplots(figsize=(6, TOP_N_WORDS * 0.4))
+                                ax.barh(df['Word'], df['Contribution Score'])
+                                ax.set_xlabel('Contribution Score')
+                                ax.set_title('Top Contributors')
+                                fig.tight_layout()
+                                st.subheader("Bar Chart")
+                                st.pyplot(fig)
+
+                            with right_col:
+                                freqs = dict(zip(
+                                    top_words_df['Word'],
+                                    top_words_df['Contribution Score']
+                                ))
+                                wc = WordCloud(
+                                    width=400,
+                                    height=400,
+                                    background_color='white',
+                                    scale=3
+                                ).generate_from_frequencies(freqs)
+                                st.subheader("Word Cloud")
+                                st.image(wc.to_array(), use_container_width=True)
 
                         else:
                             st.warning('No significant contributors identified!')

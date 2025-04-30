@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 from typing import Optional
 
-from data_collection.utils.downloads import download_xml
+from data_collection.utils.downloads import load_xml
 
 
 # %% Define helper function for URL processing
@@ -50,7 +50,7 @@ def get_policy_area(xml_path: str) -> str:
         - 'bill_text_file_name': The associated bill text file name
     """
 
-    xml_content = download_xml(xml_path=xml_path)
+    xml_content = load_xml(xml_path=xml_path)
 
     if xml_content is None:
         return []
