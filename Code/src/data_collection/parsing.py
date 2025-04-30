@@ -12,7 +12,7 @@ import polars as pl
 
 from tqdm import tqdm
 
-from data_collection.utils.downloads import download_xml
+from data_collection.utils.downloads import load_xml
 
 # %% Define XML parsing workhorse
 
@@ -26,7 +26,7 @@ def xml_bill_to_text(xml_path: str) -> str:
     :return: The bill's contents in plain text.
     """
 
-    xml_content = download_xml(xml_path=xml_path)
+    xml_content = load_xml(xml_path=xml_path)
 
     if xml_content is None:
         return None

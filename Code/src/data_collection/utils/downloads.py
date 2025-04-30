@@ -10,9 +10,9 @@ from typing import Optional
 
 # %% Main XML download script
 
-def download_xml(xml_path: str) -> Optional[str]:
+def load_xml(xml_path: str) -> Optional[str]:
     """
-    Downloads an .xml file from a given pathk, returning the contents.
+    Loads an .xml file from a given path, returning the contents.
 
     :param str xml_path: The .xml file path to reference.
 
