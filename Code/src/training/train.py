@@ -81,9 +81,9 @@ def train(
     # Create parameter grids
 
     tf_idf_dict = {
-        'tfidf__ngram_range': [(1, 2)], # [(1, 1), (1, 2)],
+        'tfidf__ngram_range': [(1, 2)],
         'tfidf__max_df': [0.85],
-        'tfidf__min_df': [2], #[2, 3],
+        'tfidf__min_df': [2],
     }
 
 
@@ -92,28 +92,21 @@ def train(
     param_grid = [
         {
             **tf_idf_dict,
-            'clf': [LinearSVC(
-                random_state=random_state,
-                dual='auto', verbose=1
-            )],
-            'clf__C': [0.5, 5.0], # [1.0]
+            'clf': [LinearSVC(random_state=random_state, dual='auto', verbose=0)],
+            'clf__C': [5.0],
             'clf__max_iter': [250]
         },
-        # {
-        #     **tf_idf_dict,
-        #     'clf': [LogisticRegression(
-        #         random_state=random_state,
-        #         solver='liblinear',
-        #         verbose=1
-        #     )],
-        #     'clf__C': [1.0],
-        #     'clf__max_iter': [250],
-        # },
-        # {
-        #     **tf_idf_dict,
-        #     'clf': [MultinomialNB()],
-        #     'clf__alpha': [0.5],
-        # }
+#         {
+#             **tf_idf_dict,
+#             'clf': [LogisticRegression(random_state=random_state, solver='liblinear', verbose=1)],
+#             'clf__C': [1.0],
+#             'clf__max_iter': [250],
+#         },
+#         {
+#             **tf_idf_dict,
+#             'clf': [MultinomialNB()],
+#             'clf__alpha': [0.5],
+#         }
     ]
     print(f"\nParameter grid:\n{param_grid}")
 
@@ -126,8 +119,7 @@ def train(
         pipeline,
         param_grid,
         cv=cv_folds,
-        scoring='recall_weighted',
-        n_jobs=-1,
+        scoring='recall_macro',
         verbose=1
     )
 
@@ -135,7 +127,7 @@ def train(
     end_time = time.time()
     print(f"Grid search complete ({end_time - start_time:.2f} seconds)!")
 
-    scoring_metric = 'recall_weighted'
+    scoring_metric = 'recall_macro'
     
     print(f"\n--- Sorted Grid Search Results ---")
     results_df = pd.DataFrame(grid_search.cv_results_)
