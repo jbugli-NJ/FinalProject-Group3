@@ -28,6 +28,7 @@ dependencies = [
 [project.scripts]
 get-data = "cli.get_data:main"
 run-app = "cli.run_app:main"
+train-model = "cli.train_model:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
