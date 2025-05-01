@@ -4,11 +4,10 @@ Generated with a lot of AI assistance
 """
 # %% Imports
 
-import os
 import pytest
-from unittest.mock import MagicMock, patch # Use unittest.mock directly or via pytest-mock's mocker
+from unittest.mock import MagicMock, patch
 
-from app.app import load_artifacts, predict_policy_area, get_top_contributing_words
+from app.app import predict_policy_area, get_top_contributing_words
 
 from scipy.sparse import csr_matrix
 import pandas as pd
@@ -45,11 +44,16 @@ def test_predict_policy_area_success(mock_predict_components):
     mock_model, mock_vectorizer, mock_label_encoder = mock_predict_components
     text = "This is relevant text."
 
-    label, tfidf = predict_policy_area(text, mock_model, mock_vectorizer, mock_label_encoder)
+    label, tfidf = predict_policy_area(
+        text,
+        mock_model,
+        mock_vectorizer,
+        mock_label_encoder
+    )
 
     # Assert
     assert label == "PolicyAreaA"
-    assert tfidf is mock_vectorizer.transform.return_value # Check it returned the matrix
+    assert tfidf is mock_vectorizer.transform.return_value
     mock_vectorizer.transform.assert_called_once_with([text])
     mock_model.predict.assert_called_once()
     mock_label_encoder.inverse_transform.assert_called_once_with([1])
@@ -62,17 +66,28 @@ def test_predict_policy_area_no_text(mock_predict_components, mock_streamlit):
     empty_text = ""
     whitespace_text = "   \t\n "
 
-    label1, tfidf1 = predict_policy_area(empty_text, mock_model, mock_vectorizer, mock_label_encoder)
-    label2, tfidf2 = predict_policy_area(whitespace_text, mock_model, mock_vectorizer, mock_label_encoder)
+    label1, tfidf1 = predict_policy_area(
+        empty_text,
+        mock_model,
+        mock_vectorizer,
+        mock_label_encoder
+    )
+
+    label2, tfidf2 = predict_policy_area(
+        whitespace_text,
+        mock_model,
+        mock_vectorizer,
+        mock_label_encoder
+    )
 
     assert label1 is None and tfidf1 is None
     assert label2 is None and tfidf2 is None
-    assert mock_streamlit.warning.call_count == 2 # Called for both empty and whitespace
-    mock_vectorizer.transform.assert_not_called() # Should not attempt transform
+    assert mock_streamlit.warning.call_count == 2
+    mock_vectorizer.transform.assert_not_called()
 
 
 def test_predict_policy_area_no_features(mock_predict_components, mock_streamlit):
-    """Test prediction when TF-IDF vectorization yields no features (e.g., only stop words)."""
+    """Test when TF-IDF vectorization yields no features (e.g. only stop words)."""
 
     mock_model, mock_vectorizer, mock_label_encoder = mock_predict_components
 
@@ -81,7 +96,12 @@ def test_predict_policy_area_no_features(mock_predict_components, mock_streamlit
     mock_vectorizer.transform.return_value = zero_feature_matrix
     text = "only stop words"
 
-    label, tfidf = predict_policy_area(text, mock_model, mock_vectorizer, mock_label_encoder)
+    label, tfidf = predict_policy_area(
+        text,
+        mock_model,
+        mock_vectorizer,
+        mock_label_encoder
+    )
 
     assert label is None and tfidf is None
     mock_vectorizer.transform.assert_called_once_with([text])
@@ -102,7 +122,9 @@ def mock_explain_components():
         [0.1, -0.2, 0.5, 0.0, -0.1],
         [-0.1, 0.2, -0.5, 0.1, 0.1]
     ]
-    mock_vectorizer.get_feature_names_out.return_value = ['word1', 'word2', 'word3', 'word4', 'word5']
+    mock_vectorizer.get_feature_names_out.return_value = [
+        'word1', 'word2', 'word3', 'word4', 'word5'
+    ]
 
     indices = [1, 2, 4]
     data = [0.8, 0.6, 0.7]
@@ -114,12 +136,19 @@ def mock_explain_components():
 def test_get_top_contributing_words_success(mock_explain_components):
     """Test successful calculation of contributing words."""
 
-    mock_model, mock_vectorizer, mock_label_encoder, mock_tfidf = mock_explain_components
+    mock_model, mock_vectorizer, mock_label_encoder, mock_tfidf \
+        = mock_explain_components
+
     prediction_label = 'PolicyAreaA'
     top_n = 3
 
     df = get_top_contributing_words(
-        prediction_label, mock_tfidf, mock_model, mock_vectorizer, mock_label_encoder, top_n
+        prediction_label,
+        mock_tfidf,
+        mock_model,
+        mock_vectorizer,
+        mock_label_encoder,
+        top_n
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -137,15 +166,28 @@ def test_get_top_contributing_words_success(mock_explain_components):
 
 def test_get_top_contributing_words_none_input():
     """Test when prediction_label or text_tfidf is None."""
-    # Arrange
-    mock_model, mock_vectorizer, mock_label_encoder, mock_tfidf = MagicMock(), MagicMock(), MagicMock(), MagicMock()
 
-    # Act
-    df1 = get_top_contributing_words(None, mock_tfidf, mock_model, mock_vectorizer, mock_label_encoder)
-    df2 = get_top_contributing_words("Label", None, mock_model, mock_vectorizer, mock_label_encoder)
+    mock_model, mock_vectorizer, mock_label_encoder, mock_tfidf = \
+        MagicMock(), MagicMock(), MagicMock(), MagicMock()
 
-    # Assert
+    df1 = get_top_contributing_words(None,
+        mock_tfidf,
+        mock_model,
+        mock_vectorizer,
+        mock_label_encoder
+    )
+
+    df2 = get_top_contributing_words(
+        "Label",
+        None,
+        mock_model,
+        mock_vectorizer,
+        mock_label_encoder
+    )
+
     assert isinstance(df1, pd.DataFrame) and df1.empty
     assert list(df1.columns) == ['Word', 'Contribution Score']
     assert isinstance(df2, pd.DataFrame) and df2.empty
     assert list(df2.columns) == ['Word', 'Contribution Score']
+
+# %%

@@ -6,7 +6,7 @@ Author: Jehan Bugli
 This project aims to automate policy area categorization for congressional bills.
 It includes scripts for data collection, training, and inference.
 
-## Folders
+## Key Folders
 
 **Group-Proposal**: The initial proposal for this project.
 
@@ -16,3 +16,6 @@ It includes scripts for data collection, training, and inference.
 
 **Final-Group-Presentation**: A presentation discussing experiment results.
 
+## Other Folders
+
+**.github**: Stores workflow .yaml files used for minor testing efforts.

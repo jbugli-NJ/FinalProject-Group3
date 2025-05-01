@@ -60,10 +60,12 @@ def load_artifacts(artifacts_dir: str):
 
     except FileNotFoundError:
 
-        st.error(f"Could not find file in: {artifacts_dir}"
-                 f"Ensure '{os.path.basename(model_path)}', "
-                 f"'{os.path.basename(vectorizer_path)}', and "
-                 f"'{os.path.basename(label_encoder_path)}' exist.")
+        st.error(
+            f"Could not find file in: {artifacts_dir}"
+            f"Ensure '{os.path.basename(model_path)}', "
+            f"'{os.path.basename(vectorizer_path)}', and "
+            f"'{os.path.basename(label_encoder_path)}' exist."
+        )
         return None, None, None
     
     except Exception as e:
