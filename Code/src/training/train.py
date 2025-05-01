@@ -7,7 +7,6 @@ LogisticRegression and MultinomialNB are removed but retained for reference.
 
 # %% Imports
 
-import argparse
 import os
 import time
 import pandas as pd
